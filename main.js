@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import path from 'node:path'
 import { fileURLToPath } from 'node:url';
 
@@ -6,15 +6,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
+let mainWindow;
 function createWindow() {
     const preloadPath = path.join(__dirname, 'preload.cjs');
-  const win = new BrowserWindow({
+    mainWindow = new BrowserWindow({
     width: 800,
-    height: 600,
+    height: 700,
       webPreferences: {
       preload: preloadPath,
-      nodeIntegration: true,
-      contextIsolation: false,
+      nodeIntegration: false,
+      contextIsolation: true,
       enableRemoteModule: true
     }
   });
@@ -22,11 +23,11 @@ function createWindow() {
   // Carga la URL adecuada dependiendo del entorno
   if (isDev) {
     // console.log('Cargando desde el servidor de desarrollo Vite');
-    win.loadURL('http://localhost:5173/');
-    win.webContents.openDevTools();
+    mainWindow.loadURL('http://localhost:5173/');
+    mainWindow.webContents.openDevTools();
   } else {
     // console.log('Cargando desde la carpeta dist');
-    win.loadFile(path.join(__dirname, 'dist/index.html'));
+    mainWindow.loadFile(path.join(__dirname, 'dist/index.html'));
   }
 }
 
@@ -47,4 +48,18 @@ app.on('activate', () => {
 ipcMain.on('btn-click', (event, arg) => {
     console.log('Button clicked:', arg);
     event.reply('btn-click-reply', `Received: ${arg}`);
-  });
+});
+  
+ipcMain.on('open-dialog', (event) => { 
+  dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile', 'openDirectory']
+  }).then(result => {
+    if (!result.canceled && result.filePaths.length > 0) {
+      const filePath = result.filePaths[0];
+      const fileName = path.basename(filePath); // Extraer el nombre del archivo
+      event.reply('selected-file', fileName); // Enviar solo el nombre del archivo al renderer
+  }
+  }).catch(err => {
+    console.log(err)
+  })
+})
