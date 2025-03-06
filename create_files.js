@@ -1,18 +1,20 @@
 import { readExcelFile, convertJsonToExcel } from './process-excel/convert_excel.js';
 import dayjs from 'dayjs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+// import path from 'node:path';
+// import { fileURLToPath } from 'node:url';
 import isBetween from './process-excel/plugins/isBetween.js';
+import isSameOnBefore from './process-excel/plugins/isSameOnBefore.js';
 import { getAll } from './process-mysql/query_sql.js';
 
 dayjs.extend(isBetween);
+dayjs.extend(isSameOnBefore);
 
 // Obtener el directorio actual del archivo
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// const __filename = fileURLToPath(import.meta.url);
+// const __dirname = path.dirname(__filename);
 
 // Construir la ruta del archivo de Excel
-const excelFilePath = path.join(__dirname, 'consulta_2024-2025.xlsx');
+// const excelFilePath = path.join(__dirname, 'consulta_2024-2025.xlsx');
 
 const convertTimestampToDate = (timestamp) => {
     return dayjs.unix(timestamp).format('DD/MM/YYYY'); 
@@ -28,7 +30,7 @@ const data = {
     iss_sanchinarro: 'NIVEL 0 IISS SANCHINARRO'
 }
 
-const getServideskInc = async () => {
+const getServideskInc = async (excelFilePath) => {
     const res = await readExcelFile(excelFilePath)
     const groupedByGrupo = {}; 
   
@@ -74,8 +76,42 @@ const getIntegriaInc = async () => {
     return integriaInc;
 }
 
-const createFileIss = async (openDate, closeDate, columnOrder) => {
-    const servideskInc = await getServideskInc();
+
+// Num_Incidencia	Estado	FechaApertura	FechaCierre	Usuario	Extension	Resumen	Grupo	Tecnico_Asignado	Tipo_Inc	Descripcion_Tipo
+const orderServidesk = [
+    'Num_Incidencia',
+    'Estado',
+    'FechaApertura',
+    'FechaCierre',
+    'Usuario',
+    'Extension',
+    'Resumen',
+    'Grupo',
+    'Tecnico_Asignado',
+    'Descripcion_Tipo',
+    'Tipo_Inc',
+  ];
+  
+  // Num_Incidencia Estado FechaApertura FechaCierre Usuario Extension Resumen
+  // Grupo Tecnico_Asignado Descripcion_Tipo Ultima_actuacion Hora_creacion Localizacion Origen
+  const orderIntegria = [
+      'Num_Incidencia',
+      'Estado',
+      'FechaApertura',
+      'FechaCierre',
+      'Usuario',
+      'Extension',
+      'Resumen',
+      'Grupo',
+      'Tecnico_Asignado',
+      'Descripcion_Tipo',
+      'Ultima_actuacion', 
+      'Localizacion', 
+    ];
+
+
+export const createFileIss = async (excelFilePath, openDate, closeDate) => {
+    const servideskInc = await getServideskInc(excelFilePath);
     const result = [];
 
     Object.keys(data).forEach(key => {
@@ -101,7 +137,7 @@ const createFileIss = async (openDate, closeDate, columnOrder) => {
                     keyObject.cerradas.push(incident);
                 }
 
-                if (incident.Estado === 'Abierta' || incident.Estado === 'Fijada' || incident.Estado === 'Resolutor Externo') {
+                if (fechaApertura.isSameOrBefore(openDate) && (incident.Estado === 'Abierta' || incident.Estado === 'Fijada' || incident.Estado === 'Resolutor Externo')) {
                     keyObject.pendientes.push(incident);
                 }
             });
@@ -110,14 +146,18 @@ const createFileIss = async (openDate, closeDate, columnOrder) => {
         }
     });
 
-     const folderName = 'issExcel'
+   
+
+     const folderName = 'iss-excel'
+     const startDate = closeDate.format('DD/MM/YYYY');
+     const endDate =  openDate.format('DD/MM/YYYY');
     result.forEach((place) => { 
-        convertJsonToExcel(place, columnOrder, folderName)
+        convertJsonToExcel(place, orderServidesk, folderName, startDate, endDate)
     })
 }
 
 
-const createFileIntegria = async (openDate, closeDate, columnOrder) => {
+export const createFileIntegria = async (openDate, closeDate) => {
     const integriaInc = await getIntegriaInc();
     const result = []
     Object.keys(integriaInc).forEach((item) => {
@@ -142,57 +182,18 @@ const createFileIntegria = async (openDate, closeDate, columnOrder) => {
                 keyObject.cerradas.push(inc);
             }
 
-            if (inc.Estado === 'Nuevo' || inc.Estado === 'Asignado') {
+            if (fechaApertura.isSameOrBefore(openDate) && (inc.Estado === 'Nuevo' || inc.Estado === 'Asignado')) {
                 keyObject.pendientes.push(inc);
             }
         });
         result.push({ [item]: keyObject });
        
     })
-
-    const folderName = 'integriaExcel'
+  
+    const folderName = 'integria-excel'
+    const startDate = closeDate.format('DD/MM/YYYY');
+    const endDate =  openDate.format('DD/MM/YYYY');
     result.forEach((place) => { 
-        convertJsonToExcel(place, columnOrder, folderName)
+        convertJsonToExcel(place, orderIntegria, folderName, startDate, endDate)
     })
 }
-
-
-// Num_Incidencia	Estado	FechaApertura	FechaCierre	Usuario	Extension	Resumen	Grupo	Tecnico_Asignado	Tipo_Inc	Descripcion_Tipo
-const orderServidesk = [
-  'Num_Incidencia',
-  'Estado',
-  'FechaApertura',
-  'FechaCierre',
-  'Usuario',
-  'Extension',
-  'Resumen',
-  'Grupo',
-  'Tecnico_Asignado',
-  'Descripcion_Tipo',
-  'Tipo_Inc',
-];
-
-// Num_Incidencia Estado FechaApertura FechaCierre Usuario Extension Resumen
-// Grupo Tecnico_Asignado Descripcion_Tipo Ultima_actuacion Hora_creacion Localizacion Origen
-const orderIntegria = [
-    'Num_Incidencia',
-    'Estado',
-    'FechaApertura',
-    'FechaCierre',
-    'Usuario',
-    'Extension',
-    'Resumen',
-    'Grupo',
-    'Tecnico_Asignado',
-    'Descripcion_Tipo',
-    'Ultima_actuacion', 
-    'Hora_creacion', 
-    'Localizacion', 
-    'Origen'
-  ];
-
- const openDate = dayjs('17/02/2025', 'D/M/YYYY');
- const closeDate = dayjs('23/02/2025', 'D/M/YYYY');
-
-createFileIss(openDate, closeDate, orderServidesk);
-createFileIntegria(openDate, closeDate, orderIntegria);

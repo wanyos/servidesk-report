@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs';
 import path from 'node:path';
-import fs from 'node:fs'
+import fs from 'node:fs';
+import os from 'node:os';
 
 export const readExcelFile = async (filePath) => {
   const workbook = new ExcelJS.Workbook();
@@ -27,7 +28,7 @@ export const readExcelFile = async (filePath) => {
 
 
 
-export const convertJsonToExcel = async (jsonData, columnOrder, folderName) => {
+export const convertJsonToExcel = async (jsonData, columnOrder, folderName, startDate, endDate) => {
   const excelName = Object.keys(jsonData)[0];
   const categories = Object.keys(jsonData[excelName]);
   const workbook = new ExcelJS.Workbook();
@@ -36,28 +37,72 @@ export const convertJsonToExcel = async (jsonData, columnOrder, folderName) => {
     const worksheet = workbook.addWorksheet(`${incName}`);
     const arrayInc = jsonData[excelName][incName];
 
-    if (arrayInc.length > 0) {
-      // Usar el orden definido en columnOrder en lugar del orden natural del objeto
-      worksheet.columns = columnOrder
-        .filter(header => arrayInc[0].hasOwnProperty(header)) // Solo incluir columnas que existan
-        .map(header => ({ header, key: header }));
+    // Título en fila 1
+    worksheet.mergeCells('C1', 'J1');
+    const titleRow = worksheet.getRow(1);
+    titleRow.getCell(3).value = `${incName}`.toLocaleUpperCase(); 
+    titleRow.font = { name: 'Arial', size: 12, bold: true };
+    titleRow.alignment = { vertical: 'middle', horizontal: 'center' };
+    titleRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '49aff6' } };
 
-      // Agregar filas manteniendo el orden de las columnas
+    // Fecha en fila 2
+    worksheet.mergeCells('C2', 'J2');
+    const dateRow = worksheet.getRow(2);
+    dateRow.getCell(3).value = `Fecha de inicio: ${startDate} - Fecha de fin: ${endDate}`;
+    dateRow.font = { name: 'Arial', size: 11, bold: true };
+    dateRow.alignment = { vertical: 'middle', horizontal: 'center' };
+    dateRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '49aff6' } };
+
+
+    if (arrayInc.length > 0) {
+      worksheet.columns = columnOrder
+        .filter(header => arrayInc[0].hasOwnProperty(header))
+        .map(header => ({ key: header, width: 12  })); 
+
+      const headerRow = worksheet.getRow(3);
+      columnOrder.forEach((key, index) => {
+        if (arrayInc[0].hasOwnProperty(key)) {
+          headerRow.getCell(index + 1).value = key;
+        }
+      });
+      headerRow.font = { bold: true };
+      headerRow.alignment = { horizontal: 'center' };
+      headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E6E6E6' } };
+
       arrayInc.forEach(data => {
-        // Crear un objeto con solo las propiedades en el orden deseado
-        const orderedData = {};
-        columnOrder.forEach(key => {
-          if (data.hasOwnProperty(key)) {
-            orderedData[key] = data[key];
-          }
-        });
+        const orderedData = columnOrder.reduce((acc, key) => {
+          acc[key] = data[key] || '';
+          return acc;
+        }, {});
         worksheet.addRow(orderedData);
       });
+
     }
   });
 
+  // Obtener el directorio de inicio del usuario
+  // const homeDir = os.homedir();
+  // let desktopDir;
+
+  // Determinar la ruta del escritorio dependiendo del sistema operativo
+  // if (process.platform === 'win32') {
+  //   desktopDir = path.join(homeDir, 'Desktop');
+  // } else if (process.platform === 'darwin') {
+  //   desktopDir = path.join(homeDir, 'Desktop');
+  // } else {
+  //   desktopDir = path.join(homeDir, 'Escritorio');
+  // }
+
   // Crear la carpeta si no existe
-  const dirPath = path.join(process.cwd(), `${folderName}`);
+   const dirPath = path.join(process.cwd(), `${folderName}`);
+  // const dirPath = path.join(desktopDir, `${folderName}`);
+  // try {
+  //   fs.mkdirSync(dirPath, { recursive: true });
+  // } catch (err) {
+  //   console.error('Error creating directory:', err);
+  //   throw err;
+  // }
+
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath);
   }

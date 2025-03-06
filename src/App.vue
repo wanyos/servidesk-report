@@ -3,20 +3,20 @@
     <section class="section__select">
       <h3>Report Servidesk</h3>
 
-      <button @click="showDialog">Select file:</button>
+      <button @click="showDialog">Select file</button>
       <p class="select__file">{{ fileSelect }}</p>
       <DateFilter @set-date="selectDate" class="date__filter" />
       <p class="select__file">{{ datesSearch }}</p>
     </section>
 
     <section class="section__process">
-      <button :disabled="isDisabled">Process</button>
+      <button @click="setProcess" :disabled="isDisabled">Process</button>
     </section>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, reactive } from "vue";
+import { ref, computed, reactive, toRaw } from "vue";
 import DateFilter from "./components/DateFilter.vue";
 import dayjs from "dayjs";
 
@@ -52,14 +52,23 @@ const selectDate = (date) => {
 };
 
 window.electronApi.onFileSelected((event, filePath) => {
-  console.log("Archivo seleccionado:", filePath);
   fileSelect.value = filePath;
 });
+
+
+const setProcess = () => {
+  const formattedDates = {
+    initDate: dates.initDate.format('DD/MM/YYYY'),
+    endDate: dates.endDate.format('DD/MM/YYYY')
+  };
+  window.electronApi.initProcess(formattedDates);
+}
+
 </script>
 
 <style scoped>
 .container {
-  border: 1px solid #fff;
+  border: 1px solid var(--color);
   border-radius: 10px;
   padding: 15px 20px;
   min-width: 40rem;
@@ -98,9 +107,12 @@ window.electronApi.onFileSelected((event, filePath) => {
 }
 
 button {
+  font-size: 15px;
+  color: var(--color);
   border-radius: 8px;
+ 
   border: 1px solid transparent;
-  padding: 5px 15px;
+  padding: 8px 20px;
   background-color: #1a1a1a;
   cursor: pointer;
   transition: border-color 0.25s;
