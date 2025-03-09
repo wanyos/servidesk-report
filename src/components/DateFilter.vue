@@ -12,16 +12,18 @@
 </template>
 
 <script setup>
-import DatePicker from "vuejs3-datepicker";
+import DatePicker from 'vuejs3-datepicker'
 
-const emit = defineEmits(["setDate"]);
+const emit = defineEmits(['setDate'])
 
 const selectDate = (date) => {
-  emit("setDate", date);
-};
+  emit('setDate', date)
+}
+
 </script>
 
 <style lang="css" scoped>
+
 :deep(.vuejs3-datepicker__calendar) {
   touch-action: none;
 }

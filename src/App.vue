@@ -5,7 +5,9 @@
 
       <button @click="showDialog">Select file</button>
       <p class="select__file">{{ fileSelect }}</p>
-      <DateFilter @set-date="selectDate" class="date__filter" />
+
+      <DateFilter @set-date="selectDate" />
+
       <p class="select__file">{{ datesSearch }}</p>
     </section>
 
