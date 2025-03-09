@@ -12,18 +12,16 @@
 </template>
 
 <script setup>
-import DatePicker from 'vuejs3-datepicker'
+import DatePicker from "vuejs3-datepicker";
 
-const emit = defineEmits(['setDate'])
+const emit = defineEmits(["setDate"]);
 
 const selectDate = (date) => {
-  emit('setDate', date)
-}
-
+  emit("setDate", date);
+};
 </script>
 
 <style lang="css" scoped>
-
 :deep(.vuejs3-datepicker__calendar) {
   touch-action: none;
 }
@@ -77,11 +75,11 @@ const selectDate = (date) => {
 :deep(#calendar-div) {
   font-size: 15px;
   color: var(--color);
-  background-color: #1a1a1a;;
+  background-color: #1a1a1a;
   border-radius: 8px;
-  padding: 8px 15px;
+  padding: 10px 25px;
   border: 1px solid transparent;
-  height: 30px;
+  height: 33px;
   width: 110px;
   display: flex;
   align-items: center;
@@ -102,10 +100,9 @@ const selectDate = (date) => {
 :deep(.vuejs3-datepicker__icon),
 :deep(.vuejs3-datepicker__content) {
   color: var(--color);
-} 
+}
 
 :deep(.vuejs3-datepicker__icon) {
   display: none;
 }
-
 </style>

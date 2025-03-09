@@ -4,10 +4,18 @@ import dayjs from 'dayjs';
 import { fileURLToPath } from 'node:url';
 import { createFileIss, createFileIntegria } from './create_files.js';
 import fs from 'node:fs';
+import https from 'node:https'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+
+const iconName = path.join(__dirname, 'iconForDragAndDrop.png')
+const icon = fs.createWriteStream(iconName)
+
+https.get('https://img.icons8.com/ios/452/drag-and-drop.png', (response) => {
+  response.pipe(icon)
+})
 
 let mainWindow;
 let filePath;
@@ -15,8 +23,8 @@ let filePath;
 function createWindow() {
     const preloadPath = path.join(__dirname, 'preload.cjs');
     mainWindow = new BrowserWindow({
-    width: 900,
-    height: 750,
+    width: 1200,
+    height: 1000,
       webPreferences: {
       preload: preloadPath,
       nodeIntegration: false,
@@ -34,7 +42,9 @@ function createWindow() {
   }
 }
 
+
 app.whenReady().then(createWindow);
+
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -48,11 +58,11 @@ app.on('activate', () => {
   }
 });
 
-ipcMain.on('btn-click', (event, arg) => {
-    event.reply('btn-click-reply', `Received: ${arg}`);
-});
+// ipcMain.on('btn-click', (event, arg) => {
+//     event.reply('btn-click-reply', `Received: ${arg}`);
+// });
   
-ipcMain.on('open-dialog', (event) => { 
+ipcMain.on('open-dialog', (event) => {
   dialog.showOpenDialog(mainWindow, {
     properties: ['openFile'],
     filters: [
@@ -63,22 +73,11 @@ ipcMain.on('open-dialog', (event) => {
       filePath = result.filePaths[0];
       const fileName = path.basename(filePath); // Extraer el nombre del archivo
       event.reply('selected-file', fileName); // Enviar solo el nombre del archivo al renderer
-  }
+    }
   }).catch(err => {
     console.log(err)
   })
-})
-
-// ipcMain.handle('init-process', async (event, arg) => {
-//   const openDate = dayjs(arg.initDate, 'DD/MM/YYYY');
-//   const closeDate = dayjs(arg.endDate, 'DD/MM/YYYY');
-
-//   const filesIss = await createFileIss(filePath, openDate, closeDate);
-//   const filesIntegria = await createFileIntegria(openDate, closeDate);
-
-//   return [...filesIss, ...filesIntegria];
-// });
-
+});
 
 ipcMain.handle('init-process', async (event, arg) => {
   const openDate = dayjs(arg.initDate, 'DD/MM/YYYY');
@@ -87,21 +86,23 @@ ipcMain.handle('init-process', async (event, arg) => {
   const filesIss = await createFileIss(filePath, openDate, closeDate);
   const filesIntegria = await createFileIntegria(openDate, closeDate);
 
-  return [
-    ...filesIss, 
-    ...filesIntegria
-  ].map(file => ({
-    name: path.basename(file),
-    path: path.resolve(file) // Asegura path absoluto
-  }));
+  return {
+    filesIss: filesIss.map(file => ({
+      name: path.basename(file),
+      path: path.resolve(file) // Asegura path absoluto
+    })),
+    filesIntegria: filesIntegria.map(file => ({
+      name: path.basename(file),
+      path: path.resolve(file) // Asegura path absoluto
+    }))
+  };
 });
 
 
 // Añade este handler para el drag
-ipcMain.on('start-drag', (event, filePath) => {
+ipcMain.on('start-drag', (event, filePath, arrayName, index) => {
+  const icon = nativeImage.createFromPath(iconName);
   try {
-    const iconPath = path.join(__dirname, 'icon.png');
-    const icon = nativeImage.createFromPath(iconPath);
     
     // Verificación extrema del path
     if (!path.isAbsolute(filePath)) {
@@ -115,15 +116,33 @@ ipcMain.on('start-drag', (event, filePath) => {
 
     event.sender.startDrag({
       file: filePath,
-      icon: icon.resize({ width: 32, height: 32 })
+      icon: icon
     });
-    
+
+
+    // Detectar si el archivo se soltó fuera de Electron
+    // mainWindow.on("blur", () => {
+    //   console.log("Archivo soltado fuera de la ventana de Electron");
+    //   mainWindow.webContents.send("file-dropped-outside", { arrayName, index });
+    // });
+
+    // mainWindow.on("focus", () => {
+    //   console.log("Regresó a la ventana sin soltar el archivo.");
+    //   mainWindow.webContents.send("cancel-drag");
+    // });
   } catch (error) {
     console.error('Fallo catastrófico en drag:', error);
-    // app.quit(); // Cierre controlado para evitar corrupción
+    app.quit(); // Cierre controlado para evitar corrupción
   }
 });
+
 
 ipcMain.handle('checkFileExists', (event, filePath) => {
   return fs.existsSync(filePath);
 });
+
+ipcMain.on('drag-end', (event, item, arrayName) => { 
+  console.log('item main', item);
+  console.log('array main', arrayName)
+})
+
