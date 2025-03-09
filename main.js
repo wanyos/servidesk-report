@@ -1,8 +1,9 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, nativeImage } from 'electron';
 import path from 'node:path';
 import dayjs from 'dayjs';
 import { fileURLToPath } from 'node:url';
 import { createFileIss, createFileIntegria } from './create_files.js';
+import fs from 'node:fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,11 +27,9 @@ function createWindow() {
 
   // Carga la URL adecuada dependiendo del entorno
   if (isDev) {
-    // console.log('Cargando desde el servidor de desarrollo Vite');
     mainWindow.loadURL('http://localhost:6173/');
     // mainWindow.webContents.openDevTools();
   } else {
-    // console.log('Cargando desde la carpeta dist');
     mainWindow.loadFile(path.join(__dirname, 'dist/index.html'));
   }
 }
@@ -50,7 +49,6 @@ app.on('activate', () => {
 });
 
 ipcMain.on('btn-click', (event, arg) => {
-    // console.log('Button clicked:', arg);
     event.reply('btn-click-reply', `Received: ${arg}`);
 });
   
@@ -71,11 +69,61 @@ ipcMain.on('open-dialog', (event) => {
   })
 })
 
+// ipcMain.handle('init-process', async (event, arg) => {
+//   const openDate = dayjs(arg.initDate, 'DD/MM/YYYY');
+//   const closeDate = dayjs(arg.endDate, 'DD/MM/YYYY');
 
-ipcMain.on('init-process', (event, arg) => {
+//   const filesIss = await createFileIss(filePath, openDate, closeDate);
+//   const filesIntegria = await createFileIntegria(openDate, closeDate);
+
+//   return [...filesIss, ...filesIntegria];
+// });
+
+
+ipcMain.handle('init-process', async (event, arg) => {
   const openDate = dayjs(arg.initDate, 'DD/MM/YYYY');
   const closeDate = dayjs(arg.endDate, 'DD/MM/YYYY');
 
- createFileIss(filePath, openDate, closeDate);
- createFileIntegria(openDate, closeDate);
-})
+  const filesIss = await createFileIss(filePath, openDate, closeDate);
+  const filesIntegria = await createFileIntegria(openDate, closeDate);
+
+  return [
+    ...filesIss, 
+    ...filesIntegria
+  ].map(file => ({
+    name: path.basename(file),
+    path: path.resolve(file) // Asegura path absoluto
+  }));
+});
+
+
+// Añade este handler para el drag
+ipcMain.on('start-drag', (event, filePath) => {
+  try {
+    const iconPath = path.join(__dirname, 'icon.png');
+    const icon = nativeImage.createFromPath(iconPath);
+    
+    // Verificación extrema del path
+    if (!path.isAbsolute(filePath)) {
+      throw new Error(`Path relativo detectado: ${filePath}`);
+    }
+
+    // Verificación de extensión del archivo
+    if (path.extname(filePath) !== '.xlsx') {
+      throw new Error('Solo se permiten archivos .xlsx');
+    }
+
+    event.sender.startDrag({
+      file: filePath,
+      icon: icon.resize({ width: 32, height: 32 })
+    });
+    
+  } catch (error) {
+    console.error('Fallo catastrófico en drag:', error);
+    // app.quit(); // Cierre controlado para evitar corrupción
+  }
+});
+
+ipcMain.handle('checkFileExists', (event, filePath) => {
+  return fs.existsSync(filePath);
+});

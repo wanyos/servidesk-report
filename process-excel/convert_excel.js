@@ -1,7 +1,7 @@
 import ExcelJS from 'exceljs';
 import path from 'node:path';
 import fs from 'node:fs';
-import os from 'node:os';
+import { app } from 'electron';
 
 export const readExcelFile = async (filePath) => {
   const workbook = new ExcelJS.Workbook();
@@ -80,34 +80,15 @@ export const convertJsonToExcel = async (jsonData, columnOrder, folderName, star
     }
   });
 
-  // Obtener el directorio de inicio del usuario
-  // const homeDir = os.homedir();
-  // let desktopDir;
-
-  // Determinar la ruta del escritorio dependiendo del sistema operativo
-  // if (process.platform === 'win32') {
-  //   desktopDir = path.join(homeDir, 'Desktop');
-  // } else if (process.platform === 'darwin') {
-  //   desktopDir = path.join(homeDir, 'Desktop');
-  // } else {
-  //   desktopDir = path.join(homeDir, 'Escritorio');
-  // }
-
-  // Crear la carpeta si no existe
-   const dirPath = path.join(process.cwd(), `${folderName}`);
-  // const dirPath = path.join(desktopDir, `${folderName}`);
-  // try {
-  //   fs.mkdirSync(dirPath, { recursive: true });
-  // } catch (err) {
-  //   console.error('Error creating directory:', err);
-  //   throw err;
-  // }
+  const userDataPath = app.getPath('userData'); // Obtiene una ruta segura para guardar datos
+  const dirPath = path.join(userDataPath, `${folderName}`);
 
   if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath);
+    fs.mkdirSync(dirPath, { recursive: true });
   }
-
+  
   const filePath = path.join(dirPath, `${excelName}.xlsx`);
   await workbook.xlsx.writeFile(filePath);
   console.log('Excel file created successfully at', filePath);
+  return filePath;
 };

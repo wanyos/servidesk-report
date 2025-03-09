@@ -9,6 +9,12 @@
       <p class="select__file">{{ datesSearch }}</p>
     </section>
 
+    <section class="section__files">
+      <div v-for="(file, item) in files" :key="item" draggable="true" @dragstart="handleDragStart(file)" class="item__file">
+        {{ file.name }}
+      </div>
+    </section>
+
     <section class="section__process">
       <button @click="setProcess" :disabled="isDisabled">Process</button>
     </section>
@@ -21,6 +27,7 @@ import DateFilter from "./components/DateFilter.vue";
 import dayjs from "dayjs";
 
 const fileSelect = ref("Choose file name...");
+const files = ref([])
 
 const dates = reactive({
   initDate: null,
@@ -42,7 +49,6 @@ const isDisabled = computed(
 );
 
 const showDialog = () => {
-  // window.electronApi.btn(fileSelect.value);
   window.electronApi.openDialog();
 };
 
@@ -55,14 +61,43 @@ window.electronApi.onFileSelected((event, filePath) => {
   fileSelect.value = filePath;
 });
 
+const handleDragStart = (file) => {
+  try {
+    // Convertir el proxy a objeto real
+    const rawFile = toRaw(file);
+    // console.log('Archivo raw:', rawFile);
+    
+    if (!rawFile?.path) {
+      throw new Error('El objeto no tiene path');
+    }
 
-const setProcess = () => {
+    // Verificar existencia del archivo (opcional pero recomendado)
+    window.electronApi.checkFileExists(rawFile.path)
+      .then(exists => {
+        if (!exists) throw new Error('Archivo no existe');
+        window.electronApi.startDrag(rawFile.path);
+      });
+      
+  } catch (error) {
+    console.error('Error en drag:', error);
+  }
+};
+
+const setProcess = async () => {
   const formattedDates = {
     initDate: dates.initDate.format('DD/MM/YYYY'),
     endDate: dates.endDate.format('DD/MM/YYYY')
   };
-  window.electronApi.initProcess(formattedDates);
+  try {
+    files.value = await window.electronApi.initProcess(formattedDates);
+    // console.log('Archivos recibidos:', JSON.stringify(files.value, null, 2));
+  } catch (error) {
+    console.error('Error al crear los archivos:', error);
+  }
 }
+
+
+
 
 </script>
 
@@ -98,6 +133,20 @@ const setProcess = () => {
 .select__file {
   justify-self: start;
   align-self: center;
+}
+
+.section__files {
+  border: 1px solid red;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+}
+
+.item__file {
+  border: 1px solid blue;
+  padding: 0.5rem;
 }
 
 .section__process {

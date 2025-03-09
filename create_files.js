@@ -146,14 +146,15 @@ export const createFileIss = async (excelFilePath, openDate, closeDate) => {
         }
     });
 
-   
-
      const folderName = 'iss-excel'
      const startDate = closeDate.format('DD/MM/YYYY');
      const endDate =  openDate.format('DD/MM/YYYY');
-    result.forEach((place) => { 
-        convertJsonToExcel(place, orderServidesk, folderName, startDate, endDate)
-    })
+     const filesIss = [];
+     for (const place of result) { 
+        const filePath = await convertJsonToExcel(place, orderServidesk, folderName, startDate, endDate);
+        filesIss.push(filePath);
+      }
+    return filesIss;
 }
 
 
@@ -193,7 +194,10 @@ export const createFileIntegria = async (openDate, closeDate) => {
     const folderName = 'integria-excel'
     const startDate = closeDate.format('DD/MM/YYYY');
     const endDate =  openDate.format('DD/MM/YYYY');
-    result.forEach((place) => { 
-        convertJsonToExcel(place, orderIntegria, folderName, startDate, endDate)
-    })
+    const filesIntegria = []
+    for (const place of result) {
+        const file = await convertJsonToExcel(place, orderIntegria, folderName, startDate, endDate);
+        filesIntegria.push(file)
+    }
+    return filesIntegria;
 }
