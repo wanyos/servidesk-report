@@ -61,9 +61,7 @@ const selectDate = (date) => {
 }
 
 :deep(.vuejs3-datepicker__calendar-actionarea .cell.day) {
-  color: var(--color);
   border: none;
-  border-radius: 100%;
 }
 
 :deep(.vuejs3-datepicker__calendar-actionarea .cell.day:hover) {

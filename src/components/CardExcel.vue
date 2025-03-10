@@ -33,6 +33,7 @@ img {
   height: 70%;
   object-fit: cover;
   margin-top: 0.6rem;
+  filter: brightness(0.8);
 }
 
 p {

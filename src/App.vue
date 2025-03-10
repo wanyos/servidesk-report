@@ -11,6 +11,12 @@
     </section>
 
     <section class="section__files">
+      <loading
+        v-model:active="isLoading"
+        :can-cancel="true"
+        :is-full-page="false"
+        :color="'#1565C0'"
+      />
       <div class="div__files">
         <h4 v-if="isFilesIss">Instalaciones servicios</h4>
         <CardExcel
@@ -44,10 +50,13 @@
 
 <script setup>
 import { ref, computed, reactive, toRaw, onMounted } from "vue";
-import DateFilter from "./components/DateFilter.vue";
-import CardExcel from "./components/CardExcel.vue";
+import DateFilter from "@/components/DateFilter.vue";
+import CardExcel from "@/components/CardExcel.vue";
 import dayjs from "dayjs";
+import Loading from "vue-loading-overlay";
+import "vue-loading-overlay/dist/css/index.css";
 
+const isLoading = ref(false);
 const fileSelect = ref("Choose file name...");
 const filesIss = ref([]);
 const filesIntegria = ref([]);
@@ -112,7 +121,6 @@ const handleDragStart = (event, file, item, arrayName) => {
 const handleDragEnd = (event, item, arrayName) => {
   //  event.preventDefault();
   window.electronApi.dragend(item, arrayName);
-
   // if (arrayName === "filesIss") {
   //   filesIss.value.splice(item, 1);
   //   console.log("array after", filesIss.value);
@@ -131,6 +139,7 @@ const handleDragEnd = (event, item, arrayName) => {
 // };
 
 const setProcess = async () => {
+  isLoading.value = true;
   const formattedDates = {
     initDate: dates.initDate.format("DD/MM/YYYY"),
     endDate: dates.endDate.format("DD/MM/YYYY"),
@@ -140,6 +149,7 @@ const setProcess = async () => {
       await window.electronApi.initProcess(formattedDates);
     filesIss.value = iss;
     filesIntegria.value = integria;
+    isLoading.value = false;
   } catch (error) {
     console.error("Error al crear los archivos:", error);
   }
@@ -199,6 +209,7 @@ const setProcess = async () => {
 }
 
 .section__files {
+  position: relative;
   flex-grow: 1;
   display: flex;
   flex-direction: column;
